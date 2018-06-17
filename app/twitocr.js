@@ -10,7 +10,6 @@ const myHashTag = 'ocrme';
 const apiHost = 'https://api.twitter.com/1.1';
 
 function twitocr(_body) {
-    console.log("> > > twitocr");
     let body = _body;
     let dmEvent = null;
     let msgData = null;
@@ -19,14 +18,12 @@ function twitocr(_body) {
     let attachment = null;
 
     function init() {
-        console.log("init");
         try {
             dmEvent = body.direct_message_events.length > 0 ? body.direct_message_events[0] : null;
             msgData = dmEvent ? dmEvent.message_create.message_data : null;
             userid = dmEvent ? dmEvent.message_create.sender_id : null;
             hashtags = getHashTags();
             attachment = getAttachment();
-            console.log("working for: " + userid);
         } catch (e) {
             // Payload error, probably
         }
@@ -83,7 +80,6 @@ function twitocr(_body) {
         const oauth_token = config.access_token_key;
         const oauth_request_method = 'POST';
         const oauth_base_url = "".concat(apiHost, '/direct_messages/events/new.json');
-        console.log(oauth_base_url);
 
         const oauth_parameters = new Map();
         oauth_parameters.set('oauth_consumer_key', oauth_consumer_key);
@@ -104,7 +100,7 @@ function twitocr(_body) {
             encodeURIComponent('oauth_timestamp') + '="' + encodeURIComponent(oauth_timestamp.toString()) + '",' +
             encodeURIComponent('oauth_nonce') + '="' + encodeURIComponent(oauth_nonce) + '",' +
             encodeURIComponent('oauth_version') + '="' + encodeURIComponent(oauth_version) + '",' +
-            encodeURIComponent('oauth_signature') + '="' + oauth_signature + '"';
+            encodeURIComponent('oauth_signature') + '="' + encodeURIComponent(oauth_signature) + '"';
     }
 
     function buildBaseString(method, baseUrl, params) {
@@ -113,7 +109,7 @@ function twitocr(_body) {
             paramArray.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
         });
 
-        return method.toUpperCase() + '&' + encodeURIComponent(baseUrl) + '&' + encodeURIComponent(paramArray.join(','));
+        return method.toUpperCase() + '&' + encodeURIComponent(baseUrl) + '&' + encodeURIComponent(paramArray.join('&'));
     }
 
     init();
@@ -123,32 +119,24 @@ function twitocr(_body) {
     module.hasOcrHashTag = (hashtags.includes(myHashTag));
     module.hasAttachment = (attachment);
     module.sendDirectMessage = function(str) {
-        console.log("> > > sendDirectMessage: " + str);
         if (userid) {
             const postData = createPostData(str);
-            const oauth = generateOAuth();
-            console.log("oauth\n-----------------\n");
-            console.log(oauth);
+            let oauth = generateOAuth();
             const options = {
                 method: 'post',
                 body: postData,
                 json: true,
                 url: "".concat(apiHost, '/direct_messages/events/new.json'),
                 headers: {
-                    Authorization: oauth
+                    Authorization: oauth,
+                    'Content-Type': 'application/json'
                 }
             };
-            console.log("\there goes...");
             request(options, function(err, res, body) {
                 if (err) {
                     console.log('err: ' + err);
                     throw err;
                 }
-                const headers = res.headers;
-                const status = res.statusCode;
-                console.log(headers);
-                console.log(status);
-                console.log(body);
             });
         }
     };
