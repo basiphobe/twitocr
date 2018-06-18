@@ -3,7 +3,6 @@
 'use strict';
 
 const crypto = require('crypto');
-const jsSHA = require('jssha');
 
 /**
  * Creates a HMAC SHA-256 hash created from the app TOKEN and
@@ -15,10 +14,8 @@ module.exports.get_challenge_response = function(crc_token, consumer_secret) {
     return crypto.createHmac('sha256', consumer_secret).update(crc_token).digest('base64');
 };
 
-// https://github.com/Caligatio/jsSHA
 module.exports.hmac_sha1 = function(string, secret) {
-    const shaObj = new jsSHA('SHA-1', 'TEXT');
-    shaObj.setHMACKey(secret, 'TEXT');
-    shaObj.update(string);
-    return shaObj.getHMAC('B64');
+    const hmac = crypto.createHmac('sha1', secret);
+    hmac.update(string);
+    return hmac.digest('base64');
 };
