@@ -27,7 +27,7 @@ router.post('/', (req, res) => {
     if (twitocr.isDirectMessage) {
         if (twitocr.hasOcrHashTag) {
             if (twitocr.hasAttachment) {
-                twitocr.sendDirectMessage("Thanks for using #ocrme!");
+                twitocr.ocrAttachment();
             }
         }
     }
