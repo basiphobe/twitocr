@@ -8,6 +8,9 @@ const security = require('./security');
 const config = require('../config');
 const myHashTag = 'ocrme';
 const apiHost = 'https://api.twitter.com/1.1';
+const ocr = require('ocr-space-api');
+const fs = require('fs');
+const tmp = require('tmp');
 
 function twitocr(_body) {
     let body = _body;
@@ -52,6 +55,30 @@ function twitocr(_body) {
             // Payload error, probably
         }
         return result;
+    }
+
+    function ocrAttachment() {
+        const imageUrl = attachment.media.media_url;
+        const tmpFile = tmp.fileSync();
+        const options = {
+            url: imageUrl,
+            oauth: {
+                consumer_key: config.consumer_key,
+                consumer_secret: config.consumer_secret,
+                token: config.access_token_key,
+                token_secret: config.access_token_secret
+            }
+        };
+        request.get(options).pipe(fs.createWriteStream(tmpFile.name)).on('close', function() {
+            ocr.parseImageFromLocalFile(tmpFile.name, {
+                apikey: config.ocr_apikey,
+                language: 'eng'
+            }).then(function (result) {
+                sendDirectMessage("Here you go: \n" + result.parsedText + "\nThanks for using #ocrme!");
+            }).catch(function (err) {
+                console.log(err);
+            });
+        });
     }
 
     function createPostData(str) {
@@ -112,16 +139,10 @@ function twitocr(_body) {
         return method.toUpperCase() + '&' + encodeURIComponent(baseUrl) + '&' + encodeURIComponent(paramArray.join('&'));
     }
 
-    init();
-
-    const module = {};
-    module.isDirectMessage = (dmEvent);
-    module.hasOcrHashTag = (hashtags.includes(myHashTag));
-    module.hasAttachment = (attachment);
-    module.sendDirectMessage = function(str) {
+    function sendDirectMessage(str) {
         if (userid) {
             const postData = createPostData(str);
-            let oauth = generateOAuth();
+            const oauth = generateOAuth();
             const options = {
                 method: 'post',
                 body: postData,
@@ -139,7 +160,15 @@ function twitocr(_body) {
                 }
             });
         }
-    };
+    }
+
+    init();
+
+    const module = {};
+    module.isDirectMessage = (dmEvent);
+    module.hasOcrHashTag = (hashtags.includes(myHashTag));
+    module.hasAttachment = (attachment);
+    module.ocrAttachment = ocrAttachment;
     return module;
 }
 
