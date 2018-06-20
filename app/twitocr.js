@@ -14,103 +14,111 @@ const tmp = require('tmp');
 
 /**
  * Main function for receiving and responding to direct messages.
+ * @name twitocr
  * @return module
  */
 function twitocr() {
-    let body = null;
-    let dmEvent = null;
+    let directMessage = null;
     let msgData = null;
-    let hashtags = [];
     let userid = null;
-    let attachment = null;
+    let attachmentUrl = null;
 
-    function init(_body) {
-        body = _body;
+    /**
+     * Initialize function variables.
+     * @name init
+     * @param {string} payload - payload data obtained from a post event
+     */
+    function init(payload) {
         try {
-            dmEvent = body.direct_message_events.length > 0 ? body.direct_message_events[0] : null;
-            msgData = dmEvent ? dmEvent.message_create.message_data : null;
-            userid = dmEvent ? dmEvent.message_create.sender_id : null;
-            hashtags = getHashTags();
-            attachment = getAttachment();
+            // Only use the first direct message, even if there are multiple.
+            directMessage = payload.direct_message_events.length > 0 ? payload.direct_message_events[0] : null;
+            msgData = directMessage ? directMessage.message_create.message_data : null;
+            userid = directMessage ? directMessage.message_create.sender_id : null;
+            attachmentUrl = getAttachmentUrl();
         } catch (e) {
             // Payload error, probably
         }
     }
 
+    /**
+     * Determines if the payload contained a direct message object.
+     * @name isDirectMessage
+     * @returns {boolean}
+     */
     function isDirectMessage() {
-        return (dmEvent);
+        return (directMessage);
     }
 
-    function getHashTags() {
-        let result = [];
+    /**
+     * Determines if the payload contains a specific hash tag.
+     * @name hasOcrHashTag
+     * @returns {boolean}
+     */
+    function hasOcrHashTag() {
+        let result = false;
+        let hashtags = null;
         if (msgData) {
             try {
-                const hashtags = msgData.entities.hashtags;
-                for (let i = 0; i < hashtags.length; i++) {
-                    result.push(hashtags[i].text);
-                }
+                hashtags = msgData.entities.hashtags;
             } catch (e) {
                 // Payload error, probably
+            }
+
+            if (hashtags) {
+                for (let i = 0; i < hashtags.length; i++) {
+                    if (hashtags[i].text.indexOf(config.ocrHashTag) >= 0) {
+                        result = true;
+                        break;
+                    }
+                }
             }
         }
         return result;
     }
 
-    function hasOcrHashTag() {
-        return (hashtags.includes(config.ocrHashTag));
-    }
-
-    function hasAttachment() {
-        return (attachment);
-    }
-
-    function getAttachment() {
-        let result = null;
+    /**
+     * Obtains the attachment url from the payload
+     * @name getAttachmentUrl
+     * @returns {string}
+     */
+    function getAttachmentUrl() {
+        let url = "";
         try {
-            result = msgData.attachment;
+            url = msgData.attachment.media.media_url;
         } catch (e) {
-            // Payload error, probably
+            // Either no image file was included, or there was a payload error
         }
 
-        if (!result) {
+        if (!url) {
             // See if there are any URLs to process
             try {
                 if (msgData.entities.urls && Object.keys(msgData.entities.urls).length) {
                     // Only deal with one right now
-                    result = msgData.entities.urls[0].expanded_url;
+                    url = msgData.entities.urls[0].expanded_url;
                 }
             } catch (e) {
 
             }
 
         }
-        return result;
+        return url;
     }
 
-    function ocrResponse() {
-        const imageUrl = (typeof attachment === 'object') ? attachment.media.media_url : attachment;
-        const tmpFile = tmp.fileSync();
-        const options = {
-            url: imageUrl,
-            oauth: {
-                consumer_key: config.consumer_key,
-                consumer_secret: config.consumer_secret,
-                token: config.access_token_key,
-                token_secret: config.access_token_secret
-            }
-        };
-        request.get(options).pipe(fs.createWriteStream(tmpFile.name)).on('close', function() {
-            ocr.parseImageFromLocalFile(tmpFile.name, {
-                apikey: config.ocr_apikey,
-                language: 'eng'
-            }).then(function (result) {
-                sendDirectMessage("Here you go: \n" + result.parsedText + "\nThanks for using #ocrme!");
-            }).catch(function (err) {
-                console.log(err);
-            });
-        });
+    /**
+     * Determines whether the payload contains an attachment object
+     * @name hasAttachment
+     * @returns {boolean}
+     */
+    function hasAttachment() {
+        return (attachmentUrl);
     }
 
+    /**
+     * Creates the payload that will be sent through the direct message response
+     * @name createPostData
+     * @param {string} str
+     * @returns {object}
+     */
     function createPostData(str) {
         return {
             event : {
@@ -128,6 +136,11 @@ function twitocr() {
         };
     }
 
+    /**
+     * Generates the authorization string for sending direct messages.
+     * @name generateOAuth
+     * @returns {string}
+     */
     function generateOAuth() {
         const oauth_consumer_key = config.consumer_key;
         const oauth_nonce = crypto.randomBytes(32).toString('base64').replace(/\W/g, '');
@@ -160,15 +173,52 @@ function twitocr() {
             encodeURIComponent('oauth_signature') + '="' + encodeURIComponent(oauth_signature) + '"';
     }
 
+    /**
+     * Builds an OAuth base signature string
+     * @param {string} method
+     * @param {string} baseUrl
+     * @param {Map} params
+     * @returns {string}
+     */
     function buildBaseString(method, baseUrl, params) {
         let paramArray = [];
         params.forEach((val,key) => {
             paramArray.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
         });
-
         return method.toUpperCase() + '&' + encodeURIComponent(baseUrl) + '&' + encodeURIComponent(paramArray.join('&'));
     }
 
+    /**
+     * Responds to direct message sender with OCR results of attachment
+     * @name ocrResponse
+     */
+    function ocrResponse() {
+        const tmpFile = tmp.fileSync();
+        const options = {
+            url: attachmentUrl,
+            oauth: {
+                consumer_key: config.consumer_key,
+                consumer_secret: config.consumer_secret,
+                token: config.access_token_key,
+                token_secret: config.access_token_secret
+            }
+        };
+        request.get(options).pipe(fs.createWriteStream(tmpFile.name)).on('close', function() {
+            ocr.parseImageFromLocalFile(tmpFile.name, {
+                apikey: config.ocr_apikey,
+                language: 'eng'
+            }).then(function (result) {
+                sendDirectMessage("Here you go: \n" + result.parsedText + "\nThanks for using #ocrme!");
+            }).catch(function (err) {
+                console.log(err);
+            });
+        });
+    }
+
+    /**
+     * Sends a direct message
+     * @param {string} str
+     */
     function sendDirectMessage(str) {
         if (userid) {
             const postData = createPostData(str);
@@ -192,8 +242,9 @@ function twitocr() {
         }
     }
 
-    //init();
-
+    /**
+     * Module exports
+     */
     const module = {};
     module.init = init;
     module.isDirectMessage = isDirectMessage;
