@@ -1,4 +1,6 @@
-// Environment: https://api.twitter.com/1.1/account_activity/all/development/webhooks
+/**
+ * @file Processes DMs for OCR
+ */
 
 'use strict';
 
@@ -6,21 +8,24 @@ const request = require('request');
 const crypto = require('crypto');
 const security = require('./security');
 const config = require('../config');
-const myHashTag = 'ocrme';
-const apiHost = 'https://api.twitter.com/1.1';
 const ocr = require('ocr-space-api');
 const fs = require('fs');
 const tmp = require('tmp');
 
-function twitocr(_body) {
-    let body = _body;
+/**
+ * Main function for receiving and responding to direct messages.
+ * @return module
+ */
+function twitocr() {
+    let body = null;
     let dmEvent = null;
     let msgData = null;
     let hashtags = [];
     let userid = null;
     let attachment = null;
 
-    function init() {
+    function init(_body) {
+        body = _body;
         try {
             dmEvent = body.direct_message_events.length > 0 ? body.direct_message_events[0] : null;
             msgData = dmEvent ? dmEvent.message_create.message_data : null;
@@ -30,6 +35,10 @@ function twitocr(_body) {
         } catch (e) {
             // Payload error, probably
         }
+    }
+
+    function isDirectMessage() {
+        return (dmEvent);
     }
 
     function getHashTags() {
@@ -47,6 +56,14 @@ function twitocr(_body) {
         return result;
     }
 
+    function hasOcrHashTag() {
+        return (hashtags.includes(config.ocrHashTag));
+    }
+
+    function hasAttachment() {
+        return (attachment);
+    }
+
     function getAttachment() {
         let result = null;
         try {
@@ -54,11 +71,24 @@ function twitocr(_body) {
         } catch (e) {
             // Payload error, probably
         }
+
+        if (!result) {
+            // See if there are any URLs to process
+            try {
+                if (msgData.entities.urls && Object.keys(msgData.entities.urls).length) {
+                    // Only deal with one right now
+                    result = msgData.entities.urls[0].expanded_url;
+                }
+            } catch (e) {
+
+            }
+
+        }
         return result;
     }
 
-    function ocrAttachment() {
-        const imageUrl = attachment.media.media_url;
+    function ocrResponse() {
+        const imageUrl = (typeof attachment === 'object') ? attachment.media.media_url : attachment;
         const tmpFile = tmp.fileSync();
         const options = {
             url: imageUrl,
@@ -106,7 +136,7 @@ function twitocr(_body) {
         const oauth_version = '1.0';
         const oauth_token = config.access_token_key;
         const oauth_request_method = 'POST';
-        const oauth_base_url = "".concat(apiHost, '/direct_messages/events/new.json');
+        const oauth_base_url = "".concat(config.twitterAPIHost, '/direct_messages/events/new.json');
 
         const oauth_parameters = new Map();
         oauth_parameters.set('oauth_consumer_key', oauth_consumer_key);
@@ -147,7 +177,7 @@ function twitocr(_body) {
                 method: 'post',
                 body: postData,
                 json: true,
-                url: "".concat(apiHost, '/direct_messages/events/new.json'),
+                url: "".concat(config.twitterAPIHost, '/direct_messages/events/new.json'),
                 headers: {
                     Authorization: oauth,
                     'Content-Type': 'application/json'
@@ -162,13 +192,14 @@ function twitocr(_body) {
         }
     }
 
-    init();
+    //init();
 
     const module = {};
-    module.isDirectMessage = (dmEvent);
-    module.hasOcrHashTag = (hashtags.includes(myHashTag));
-    module.hasAttachment = (attachment);
-    module.ocrAttachment = ocrAttachment;
+    module.init = init;
+    module.isDirectMessage = isDirectMessage;
+    module.hasOcrHashTag = hasOcrHashTag;
+    module.hasAttachment = hasAttachment;
+    module.ocrResponse = ocrResponse;
     return module;
 }
 
