@@ -1,5 +1,5 @@
 /**
- * @file Processes DMs for OCR
+ * @file Direct Message/OCR Processor
  */
 
 'use strict';
@@ -15,7 +15,7 @@ const tmp = require('tmp');
 /**
  * Main function for receiving and responding to direct messages.
  * @name twitocr
- * @return module
+ * @return {object} module
  */
 function twitocr() {
     let directMessage = null;
@@ -189,33 +189,6 @@ function twitocr() {
     }
 
     /**
-     * Responds to direct message sender with OCR results of attachment
-     * @name ocrResponse
-     */
-    function ocrResponse() {
-        const tmpFile = tmp.fileSync();
-        const options = {
-            url: attachmentUrl,
-            oauth: {
-                consumer_key: config.consumer_key,
-                consumer_secret: config.consumer_secret,
-                token: config.access_token_key,
-                token_secret: config.access_token_secret
-            }
-        };
-        request.get(options).pipe(fs.createWriteStream(tmpFile.name)).on('close', function() {
-            ocr.parseImageFromLocalFile(tmpFile.name, {
-                apikey: config.ocr_apikey,
-                language: 'eng'
-            }).then(function (result) {
-                sendDirectMessage("Here you go: \n" + result.parsedText + "\nThanks for using #ocrme!");
-            }).catch(function (err) {
-                console.log(err);
-            });
-        });
-    }
-
-    /**
      * Sends a direct message
      * @param {string} str
      */
@@ -233,13 +206,42 @@ function twitocr() {
                     'Content-Type': 'application/json'
                 }
             };
-            request(options, function(err, res, body) {
+            request(options, err => {
                 if (err) {
-                    console.log('err: ' + err);
-                    throw err;
+                    console.log(err);
                 }
             });
         }
+    }
+
+    /**
+     * Responds to direct message sender with OCR results of attachment
+     * @name ocrResponse
+     */
+    function ocrResponse() {
+        const tmpFile = tmp.fileSync();
+        const options = {
+            url: attachmentUrl,
+            oauth: {
+                consumer_key: config.consumer_key,
+                consumer_secret: config.consumer_secret,
+                token: config.access_token_key,
+                token_secret: config.access_token_secret
+            }
+        };
+        request.get(options).pipe(fs.createWriteStream(tmpFile.name)).on('close', () => {
+            ocr.parseImageFromLocalFile(tmpFile.name, {
+                apikey: config.ocr_apikey,
+                language: 'eng'
+            }).then(result => {
+                // This should be localized, really.
+                sendDirectMessage("Here you go: \n" + result.parsedText + "\nThanks for using #" + config.ocrHashTag + "!");
+            }).catch(err => {
+                // This should be localized, really.
+                sendDirectMessage("Oopsie. Something went wrong. Sorry. Try again, maybe?");
+                console.log(err);
+            });
+        });
     }
 
     /**
