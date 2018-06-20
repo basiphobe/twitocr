@@ -1,0 +1,7 @@
+# Packages
+node_modules/
+
+# Editor/IDE stuff
+*.swp
+.idea/**/workspace.xml
+.idea/**/tasks.xml
