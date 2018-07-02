@@ -26,7 +26,9 @@ function twitocr() {
     /**
      * Initialize function variables.
      * @name init
-     * @param {string} payload - payload data obtained from a post event
+     * @param {Object} payload - payload data obtained from a post event
+     * @property {Array} direct_message_events
+     * @property {string} sender_id
      */
     function init(payload) {
         try {
@@ -53,6 +55,7 @@ function twitocr() {
      * Determines if the payload contains a specific hash tag.
      * @name hasOcrHashTag
      * @returns {boolean}
+     * @property {Array} hashtags
      */
     function hasOcrHashTag() {
         let result = false;
@@ -80,6 +83,8 @@ function twitocr() {
      * Obtains the attachment url from the payload
      * @name getAttachmentUrl
      * @returns {string}
+     * @property {string} media_url
+     * @property {string} expanded_url
      */
     function getAttachmentUrl() {
         let url = "";
@@ -238,7 +243,7 @@ function twitocr() {
                 sendDirectMessage("Here you go: \n" + result.parsedText + "\nThanks for using #" + config.ocrHashTag + "!");
             }).catch(err => {
                 // This should be localized, really.
-                sendDirectMessage("Oopsie. Something went wrong. Sorry. Try again, maybe?");
+                sendDirectMessage("Oops. Something went wrong. Sorry. Try again, maybe?");
                 console.log(err);
             });
         });

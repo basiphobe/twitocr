@@ -1,5 +1,5 @@
 /**
- * @file Instantiates the weboooks server for receiving Twitter Account Activity API events.
+ * @file Instantiates the webhooks server for receiving Twitter Account Activity API events.
  */
 
 'use strict';

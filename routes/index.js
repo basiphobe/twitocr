@@ -8,6 +8,10 @@ const express = require('express');
 const router = express.Router({});
 const security = require('../app/security');
 const config = require('../config');
+/**
+ * twitocr engine
+ * @type {Object} twitocr
+ */
 const twitocr = require('../app/twitocr')();
 
 /**
@@ -17,6 +21,7 @@ const twitocr = require('../app/twitocr')();
  * @inner
  * @param {string} path
  * @param {callback} query parser
+ * @property {string} crc_token
  */
 router.get('/', (req, res) => {
     if (req.query && Object.keys(req.query).length) {
