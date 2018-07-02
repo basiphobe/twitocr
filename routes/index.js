@@ -49,7 +49,6 @@ router.post('/', (req, res) => {
         twitocr.ocrResponse();
     }
     // Return success code and payload indicating whether or not the OCR attempt succeeded.
-    console.log({ocrAttempt:ocrAttempt});
     res.status(200).json({ocrAttempt:ocrAttempt});
 });
 
