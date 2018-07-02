@@ -13,7 +13,7 @@ The app has three distinct roles:
    * Twitter API:
      * https://apps.twitter.com
        * Create an app
-         * Provide a valid Callback URL (_which will point to a running instance of this app_).
+         * Provide a valid Callback URL (**which will point to a running instance of this app**).
          * Ensure "Read, Write and Access direct messages" permissions are enabled.
        * Make note of the Consumer Key, Consumer Secret, Access Token, and Access Token Secret values.
    * Free OCR API:
