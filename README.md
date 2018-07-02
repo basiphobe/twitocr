@@ -58,7 +58,7 @@ Send your **@handle** a direct message containing either a URL to an image (or a
 
 For example:
 
-A direct message to (@basiphobe)[twitter.com/basiphobe] (_the order of the image/url and hashtag is not important_):
+A direct message to [@basiphobe](twitter.com/basiphobe) (_the order of the image/url and hashtag is not important_):
 ```
 https://i.imgur.com/leN5MZB.png #ocrme
 ```
