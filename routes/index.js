@@ -49,7 +49,7 @@ router.post('/', (req, res) => {
     // Initialize the twitocr engine with the request body
     twitocr.init(req.body);
     // If we have everything we're looking for, attempt the OCR response
-    if (twitocr.isDirectMessage() && twitocr.hasOcrHashTag() && twitocr.hasAttachment()) {
+    if ((twitocr.isDirectMessage() || twitocr.isTweet()) && twitocr.hasOcrHashTag() && twitocr.hasAttachment()) {
         ocrAttempt = true;
         twitocr.ocrResponse();
     }
