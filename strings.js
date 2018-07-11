@@ -1,6 +1,7 @@
 const strings = {
     success: "Here you go: \n%1\nThanks for using #%2.",
-    error: "Oops. Something went wrong. Sorry. Try again, maybe?"
+    error_0: "Oops. Something went wrong. Try again, maybe?",
+    error_3 : "Oops. That image does not appear to be valid."
 };
 
 module.exports = strings;

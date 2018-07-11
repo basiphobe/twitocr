@@ -206,6 +206,9 @@ function twitocr() {
         if (postData) {
             oauth_parameters.set('status', postData);
         }
+        if (postData) {
+            oauth_parameters.set('tweet_mode', 'extended');
+        }
 
         const oauth_signature_base = buildBaseString(oauth_request_method, oauth_base_url, oauth_parameters);
         const oauth_signing_key = encodeURIComponent(config.consumer_secret) + '&' + encodeURIComponent(config.access_token_secret);
@@ -271,7 +274,7 @@ function twitocr() {
         const oauth = generateOAuth(postUrl, postData);
         const options = {
             method: 'post',
-            body: 'status=' + encodeURIComponent(postData) + '&in_reply_to_status_id=' + tweetMessage.id_str,
+            body: 'status=' + encodeURIComponent(postData) + '&in_reply_to_status_id=' + tweetMessage.id_str + '&tweet_mode=extended',
             json: false,
             url: postUrl,
             headers: {
@@ -314,12 +317,16 @@ function twitocr() {
                     sendTweet(ocrResponse);
                 }
             }).catch(err => {
-                if (isDirectMessage()) {
-                    sendDirectMessage(strings.error);
-                } else if (isTweet()) {
-                    sendTweet(strings.error);
+                let errMsg = strings.error_0;
+                const errCode = "error_" + err.OCRExitCode;
+                if (errCode in strings) {
+                    errMsg = strings[errCode];
                 }
-                console.log(err);
+                if (isDirectMessage()) {
+                    sendDirectMessage(errMsg);
+                } else if (isTweet()) {
+                    sendTweet(errMsg);
+                }
             });
         });
     }
